@@ -2,7 +2,7 @@
 
 import httpx
 from typing import List, Dict, Any, Optional
-from .config import OPENAI_API_KEY, GOOGLE_API_KEY
+from config import OPENAI_API_KEY, GOOGLE_API_KEY
 
 
 async def query_openai(model_name: str, messages: List[Dict[str, str]], timeout: float = 120.0) -> Optional[Dict[str, Any]]:
