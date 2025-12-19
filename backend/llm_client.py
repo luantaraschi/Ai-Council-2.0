@@ -2,16 +2,17 @@
 
 import httpx
 from typing import List, Dict, Any, Optional
+import re
 from config import OPENAI_API_KEY, GOOGLE_API_KEY
 
 
-async def query_openai(model_name: str, messages: List[Dict[str, str]], timeout: float = 120.0) -> Optional[Dict[str, Any]]:
+async def query_openai(model_name: str, messages: List[Dict[str, Any]], timeout: float = 120.0) -> Optional[Dict[str, Any]]:
     """
     Query OpenAI API directly.
     
     Args:
         model_name: Model name without provider prefix (e.g., "gpt-5")
-        messages: List of message dicts with 'role' and 'content'
+        messages: List of message dicts with 'role' and 'content' (str or list of parts)
         timeout: Request timeout in seconds
     
     Returns:
@@ -52,13 +53,13 @@ async def query_openai(model_name: str, messages: List[Dict[str, str]], timeout:
         return None
 
 
-async def query_gemini(model_name: str, messages: List[Dict[str, str]], timeout: float = 120.0) -> Optional[Dict[str, Any]]:
+async def query_gemini(model_name: str, messages: List[Dict[str, Any]], timeout: float = 120.0) -> Optional[Dict[str, Any]]:
     """
     Query Google Gemini API directly.
     
     Args:
         model_name: Model name without provider prefix (e.g., "gemini-3-pro-preview")
-        messages: List of message dicts with 'role' and 'content'
+        messages: List of message dicts with 'role' and 'content' (str or list of parts)
         timeout: Request timeout in seconds
     
     Returns:
@@ -72,17 +73,44 @@ async def query_gemini(model_name: str, messages: List[Dict[str, str]], timeout:
         role = msg['role']
         content = msg['content']
         
+        # Handle system message
         if role == 'system':
-            system_instruction = content
-        elif role == 'user':
+            # Gemini system instructions must be text
+            if isinstance(content, list):
+                text_parts = [p['text'] for p in content if p['type'] == 'text']
+                system_instruction = "\n".join(text_parts)
+            else:
+                system_instruction = content
+            continue
+            
+        # Map roles
+        gemini_role = "model" if role == "assistant" else "user"
+        
+        parts = []
+        if isinstance(content, str):
+            parts.append({"text": content})
+        elif isinstance(content, list):
+            for item in content:
+                if item['type'] == 'text':
+                    parts.append({"text": item['text']})
+                elif item['type'] == 'image_url':
+                    # Parse data URI: data:image/png;base64,XXXX
+                    image_url = item['image_url']['url']
+                    match = re.match(r'data:([^;]+);base64,(.+)', image_url)
+                    if match:
+                        mime_type = match.group(1)
+                        data = match.group(2)
+                        parts.append({
+                            "inline_data": {
+                                "mime_type": mime_type,
+                                "data": data
+                            }
+                        })
+        
+        if parts:
             contents.append({
-                "role": "user",
-                "parts": [{"text": content}]
-            })
-        elif role == 'assistant':
-            contents.append({
-                "role": "model",
-                "parts": [{"text": content}]
+                "role": gemini_role,
+                "parts": parts
             })
     
     payload = {
@@ -98,6 +126,7 @@ async def query_gemini(model_name: str, messages: List[Dict[str, str]], timeout:
             "parts": [{"text": system_instruction}]
         }
     
+    # Use API key from config
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GOOGLE_API_KEY}"
     
     try:
@@ -130,19 +159,11 @@ async def query_gemini(model_name: str, messages: List[Dict[str, str]], timeout:
 
 async def query_model(
     model: str,
-    messages: List[Dict[str, str]],
+    messages: List[Dict[str, Any]],
     timeout: float = 120.0
 ) -> Optional[Dict[str, Any]]:
     """
     Query a model via the appropriate API based on provider prefix.
-    
-    Args:
-        model: Model identifier with provider prefix (e.g., "openai/gpt-5", "google/gemini-3-pro-preview")
-        messages: List of message dicts with 'role' and 'content'
-        timeout: Request timeout in seconds
-    
-    Returns:
-        Response dict with 'content' and optional 'reasoning_details', or None if failed
     """
     if model.startswith("openai/"):
         model_name = model.replace("openai/", "")
@@ -157,17 +178,10 @@ async def query_model(
 
 async def query_models_parallel(
     models: List[str],
-    messages: List[Dict[str, str]]
+    messages: List[Dict[str, Any]]
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
     Query multiple models in parallel.
-    
-    Args:
-        models: List of model identifiers with provider prefixes
-        messages: List of message dicts to send to each model
-    
-    Returns:
-        Dict mapping model identifier to response dict (or None if failed)
     """
     import asyncio
     

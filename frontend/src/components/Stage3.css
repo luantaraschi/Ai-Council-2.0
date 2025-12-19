@@ -1,17 +1,31 @@
+:root {
+  --stage3-bg: #f0fff0;
+  --stage3-border: #c8e6c8;
+  --stage3-accent: #2d8a2d;
+}
+
+[data-theme="dark"] {
+  --stage3-bg: #1a2e1a;
+  --stage3-border: #2d4a2d;
+  --stage3-accent: #5dba5d;
+}
+
 .stage3 {
-  background: #f0fff0;
-  border-color: #c8e6c8;
+  background: var(--stage3-bg);
+  border-color: var(--stage3-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .final-response {
-  background: #ffffff;
+  background: var(--bg-primary);
   padding: 20px;
   border-radius: 6px;
-  border: 1px solid #c8e6c8;
+  border: 1px solid var(--stage3-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .chairman-label {
-  color: #2d8a2d;
+  color: var(--stage3-accent);
   font-size: 12px;
   font-family: monospace;
   margin-bottom: 12px;
@@ -19,7 +33,7 @@
 }
 
 .final-text {
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.7;
   font-size: 15px;
 }

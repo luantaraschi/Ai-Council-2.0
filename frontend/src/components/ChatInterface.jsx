@@ -5,13 +5,29 @@ import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import './ChatInterface.css';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = {
+  'image/jpeg': 'image',
+  'image/png': 'image',
+  'image/gif': 'image',
+  'image/webp': 'image',
+  'application/pdf': 'document',
+  'text/plain': 'document',
+  'text/markdown': 'document',
+  'text/csv': 'document',
+  'application/json': 'document',
+};
+
 export default function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
 }) {
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -23,9 +39,10 @@ export default function ChatInterface({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (input.trim() && !isLoading) {
-      onSendMessage(input);
+    if ((input.trim() || attachments.length > 0) && !isLoading) {
+      onSendMessage(input, attachments);
       setInput('');
+      setAttachments([]);
     }
   };
 
@@ -34,6 +51,90 @@ export default function ChatInterface({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    addFiles(files);
+  };
+
+  const addFiles = (files) => {
+    const validFiles = [];
+
+    for (const file of files) {
+      // Check file type
+      if (!ALLOWED_TYPES[file.type]) {
+        alert(`File type not allowed: ${file.name}`);
+        continue;
+      }
+
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`File too large (max 10MB): ${file.name}`);
+        continue;
+      }
+
+      // Create preview for images
+      const fileData = {
+        file,
+        name: file.name,
+        type: ALLOWED_TYPES[file.type],
+        mimeType: file.type,
+        size: file.size,
+        preview: null,
+      };
+
+      if (fileData.type === 'image') {
+        fileData.preview = URL.createObjectURL(file);
+      }
+
+      validFiles.push(fileData);
+    }
+
+    setAttachments(prev => [...prev, ...validFiles]);
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => {
+      const newAttachments = [...prev];
+      // Revoke the object URL to free memory
+      if (newAttachments[index].preview) {
+        URL.revokeObjectURL(newAttachments[index].preview);
+      }
+      newAttachments.splice(index, 1);
+      return newAttachments;
+    });
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    addFiles(files);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type) => {
+    switch (type) {
+      case 'image': return '🖼️';
+      case 'document': return '📄';
+      default: return '📎';
     }
   };
 
@@ -66,6 +167,20 @@ export default function ChatInterface({
                     <div className="markdown-content">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="attachments-display">
+                        {msg.attachments.map((att, i) => (
+                          <div key={i} className="attachment-item">
+                            {att.preview ? (
+                              <img src={att.preview} alt={att.name} />
+                            ) : (
+                              <span className="attachment-icon">{getFileIcon(att.type)}</span>
+                            )}
+                            <span>{att.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -120,26 +235,80 @@ export default function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {conversation.messages.length === 0 && (
-        <form className="input-form" onSubmit={handleSubmit}>
-          <textarea
-            className="message-input"
-            placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            rows={3}
+      {/* Always show input form when conversation exists */}
+      <form
+        className={`input-form ${dragOver ? 'drag-over' : ''}`}
+        onSubmit={handleSubmit}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="input-wrapper">
+          {/* Attachments preview */}
+          {attachments.length > 0 && (
+            <div className="attachments-preview">
+              {attachments.map((att, index) => (
+                <div key={index} className="attachment-preview-item">
+                  {att.preview ? (
+                    <img src={att.preview} alt={att.name} className="attachment-preview-image" />
+                  ) : (
+                    <div className="attachment-preview-file">
+                      <span className="attachment-preview-icon">{getFileIcon(att.type)}</span>
+                    </div>
+                  )}
+                  <div className="attachment-preview-info">
+                    <span className="attachment-preview-name">{att.name}</span>
+                    <span className="attachment-preview-size">{formatFileSize(att.size)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="attachment-remove-btn"
+                    onClick={() => removeAttachment(index)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="input-row">
+            <button
+              type="button"
+              className="attach-button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              title="Attach files (images, PDF, text)"
+            >
+              📎
+            </button>
+            <textarea
+              className="message-input"
+              placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              rows={3}
+            />
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.md,.csv,.json"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
           />
-          <button
-            type="submit"
-            className="send-button"
-            disabled={!input.trim() || isLoading}
-          >
-            Send
-          </button>
-        </form>
-      )}
+        </div>
+        <button
+          type="submit"
+          className="send-button"
+          disabled={(!input.trim() && attachments.length === 0) || isLoading}
+        >
+          Send
+        </button>
+      </form>
     </div>
   );
 }

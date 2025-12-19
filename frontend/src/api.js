@@ -2,14 +2,39 @@
  * API client for the LLM Council backend.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+/**
+ * Get or create a unique user ID stored in localStorage
+ */
+export function getUserId() {
+  let userId = localStorage.getItem('llm_council_user_id');
+  if (!userId) {
+    userId = 'user_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('llm_council_user_id', userId);
+  }
+  return userId;
+}
+
+/**
+ * Convert a File to base64
+ */
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export const api = {
   /**
-   * List all conversations.
+   * List conversations for current user.
    */
   async listConversations() {
-    const response = await fetch(`${API_BASE}/api/conversations`);
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/api/conversations?user_id=${userId}`);
     if (!response.ok) {
       throw new Error('Failed to list conversations');
     }
@@ -17,18 +42,32 @@ export const api = {
   },
 
   /**
-   * Create a new conversation.
+   * Create a new conversation for current user.
    */
   async createConversation() {
+    const userId = getUserId();
     const response = await fetch(`${API_BASE}/api/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ user_id: userId }),
     });
     if (!response.ok) {
       throw new Error('Failed to create conversation');
+    }
+    return response.json();
+  },
+
+  /**
+   * Delete a conversation.
+   */
+  async deleteConversation(conversationId) {
+    const response = await fetch(`${API_BASE}/api/conversations/${conversationId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete conversation');
     }
     return response.json();
   },
@@ -67,13 +106,27 @@ export const api = {
   },
 
   /**
-   * Send a message and receive streaming updates.
+   * Send a message with optional attachments and receive streaming updates.
    * @param {string} conversationId - The conversation ID
    * @param {string} content - The message content
+   * @param {Array} attachments - Array of attachment objects with file, name, type, mimeType
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent) {
+  async sendMessageStream(conversationId, content, attachments = [], onEvent) {
+    // Prepare attachments as base64 for sending
+    const attachmentData = [];
+    for (const att of attachments) {
+      const base64 = await fileToBase64(att.file);
+      attachmentData.push({
+        name: att.name,
+        type: att.type,
+        mimeType: att.mimeType,
+        size: att.size,
+        data: base64,
+      });
+    }
+
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -81,7 +134,10 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          attachments: attachmentData,
+        }),
       }
     );
 

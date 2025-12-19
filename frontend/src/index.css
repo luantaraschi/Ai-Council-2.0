@@ -7,6 +7,66 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Theme colors - Light Mode */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f8f8;
+  --bg-tertiary: #f5f5f5;
+  --bg-input: #ffffff;
+  --bg-user-message: #f0f7ff;
+  --bg-stage-loading: #f9fafb;
+  --bg-active: #e8f0fe;
+  --bg-hover: #f0f0f0;
+  --bg-code: #f5f5f5;
+
+  --border-primary: #e0e0e0;
+  --border-secondary: #d0d0d0;
+  --border-user-message: #d0e7ff;
+  --border-active: #4a90e2;
+  --border-blockquote: #ddd;
+
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-blockquote: #666666;
+
+  --accent-primary: #4a90e2;
+  --accent-hover: #357abd;
+  --accent-disabled: #cccccc;
+
+  --spinner-track: #e0e0e0;
+  --spinner-active: #4a90e2;
+}
+
+[data-theme="dark"] {
+  /* Theme colors - Dark Mode */
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-tertiary: #0f0f23;
+  --bg-input: #1a1a2e;
+  --bg-user-message: #1e3a5f;
+  --bg-stage-loading: #16213e;
+  --bg-active: #1e3a5f;
+  --bg-hover: #1e1e3f;
+  --bg-code: #0f0f23;
+
+  --border-primary: #2a2a4a;
+  --border-secondary: #3a3a5a;
+  --border-user-message: #2a4a6a;
+  --border-active: #4a90e2;
+  --border-blockquote: #3a3a5a;
+
+  --text-primary: #e8e8e8;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --text-blockquote: #a0a0a0;
+
+  --accent-primary: #5a9cf2;
+  --accent-hover: #4a8ce2;
+  --accent-disabled: #4a4a6a;
+
+  --spinner-track: #3a3a5a;
+  --spinner-active: #5a9cf2;
 }
 
 * {
@@ -19,7 +79,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
@@ -70,7 +132,7 @@ body {
 }
 
 .markdown-content pre {
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 12px;
   border-radius: 4px;
   overflow-x: auto;
@@ -78,7 +140,7 @@ body {
 }
 
 .markdown-content code {
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: monospace;
@@ -93,6 +155,6 @@ body {
 .markdown-content blockquote {
   margin: 0 0 12px 0;
   padding-left: 16px;
-  border-left: 4px solid #ddd;
-  color: #666;
+  border-left: 4px solid var(--border-blockquote);
+  color: var(--text-blockquote);
 }
