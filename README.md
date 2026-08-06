@@ -1,3 +1,24 @@
+> ## Sobre este repositório
+>
+> Este é um **fork de estudo** do [llm-council](https://github.com/karpathy/llm-council),
+> de **Andrej Karpathy**. Todo o README a partir de "# LLM Council" é o texto original
+> dele — inclusive os trechos em primeira pessoa, que são a voz do autor original e não a minha.
+>
+> **O que eu acrescentei sobre o original:**
+>
+> | Arquivo | O que faz |
+> |---|---|
+> | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf` | Containerização completa da stack |
+> | `backend/requirements.txt` | Dependências fixadas |
+> | `backend/llm_client.py` | Camada de abstração sobre o cliente de LLM |
+> | `backend/supabase_storage.py` | Persistência em Supabase no lugar do armazenamento local |
+>
+> O projeto original **não declara licença**, o que significa que todos os direitos
+> permanecem com o autor. Por isso este repositório também não declara licença própria:
+> ele existe como registro de estudo, não como software redistribuível.
+
+---
+
 # LLM Council
 
 ![llmcouncil](header.jpg)
