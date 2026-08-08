@@ -2,7 +2,7 @@
 >
 > Este é um **fork de estudo** do [llm-council](https://github.com/karpathy/llm-council),
 > de **Andrej Karpathy**. Todo o README a partir de "# LLM Council" é o texto original
-> dele — inclusive os trechos em primeira pessoa, que são a voz do autor original e não a minha.
+> dele (inclusive os trechos em primeira pessoa, que são a voz do autor original e não a minha).
 >
 > **O que eu acrescentei sobre o original:**
 >
